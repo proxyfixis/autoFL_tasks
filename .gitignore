@@ -1,0 +1,8 @@
+# Generated datasets (DO NOT COMMIT)
+data/
+cifar-10-batches-py/
+
+# Virtual environments
+venv/
+.venv/
+venv*/
