@@ -1,13 +1,12 @@
 """pytorchexample: A Flower / PyTorch app."""
 
+import os
+from PIL import Image
 import torch
+from torch.utils.data import Dataset, DataLoader, random_split
+
 import torch.nn as nn
 import torch.nn.functional as F
-from datasets import load_dataset
-from flwr_datasets import FederatedDataset
-from flwr_datasets.partitioner import IidPartitioner
-from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, Normalize, ToTensor
 
 
 class Net(nn.Module):
@@ -31,45 +30,54 @@ class Net(nn.Module):
         return self.fc3(x)
 
 
-fds = None  # Cache FederatedDataset
-
-pytorch_transforms = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 
-def apply_transforms(batch):
-    """Apply transforms to the partition from FederatedDataset."""
-    batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
-    return batch
+
+class CIFARFolderDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.samples = []
+        self.transform = transform
+
+        self.classes = sorted(os.listdir(root_dir))
+        self.class_to_idx = {c: i for i, c in enumerate(self.classes)}
+
+        for cls in self.classes:
+            cls_dir = os.path.join(root_dir, cls)
+            for fname in os.listdir(cls_dir):
+                self.samples.append(
+                    (os.path.join(cls_dir, fname), self.class_to_idx[cls])
+                )
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        path, label = self.samples[idx]
+        img = Image.open(path).convert("RGB")
+        if self.transform:
+            img = self.transform(img)
+        return img, label
 
 
-def load_data(partition_id: int, num_partitions: int, batch_size: int):
-    """Load partition CIFAR10 data."""
-    # Only initialize `FederatedDataset` once
-    global fds
-    if fds is None:
-        partitioner = IidPartitioner(num_partitions=num_partitions)
-        fds = FederatedDataset(
-            dataset="uoft-cs/cifar10",
-            partitioners={"train": partitioner},
-        )
-    partition = fds.load_partition(partition_id)
-    # Divide data on each node: 80% train, 20% test
-    partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
-    # Construct dataloaders
-    partition_train_test = partition_train_test.with_transform(apply_transforms)
-    trainloader = DataLoader(
-        partition_train_test["train"], batch_size=batch_size, shuffle=True
-    )
-    testloader = DataLoader(partition_train_test["test"], batch_size=batch_size)
-    return trainloader, testloader
 
+def load_local_image_data(client_id: int, batch_size: int):
+    import torchvision.transforms as T
+    transform = T.Compose([T.ToTensor(),T.Normalize((0.5,0.5,0.5) , (0.5,0.5,0.5))])
+    
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "data", f"client_{client_id}"))
 
-def load_centralized_dataset():
-    """Load test set and return dataloader."""
-    # Load entire test set
-    test_dataset = load_dataset("uoft-cs/cifar10", split="test")
-    dataset = test_dataset.with_format("torch").with_transform(apply_transforms)
-    return DataLoader(dataset, batch_size=128)
+    dataset = CIFARFolderDataset(root, transform=transform)
+
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+    train_ds, val_ds = random_split(dataset, [train_size, val_size])
+
+    trainloader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    valloader = DataLoader(val_ds, batch_size=batch_size)
+
+    return trainloader, valloader
+
 
 
 def train(net, trainloader, epochs, lr, device):
@@ -80,9 +88,9 @@ def train(net, trainloader, epochs, lr, device):
     net.train()
     running_loss = 0.0
     for _ in range(epochs):
-        for batch in trainloader:
-            images = batch["img"].to(device)
-            labels = batch["label"].to(device)
+        for images, labels in trainloader:
+            images = images.to(device)
+            labels = labels.to(device)
             optimizer.zero_grad()
             loss = criterion(net(images), labels)
             loss.backward()
@@ -92,15 +100,16 @@ def train(net, trainloader, epochs, lr, device):
     return avg_trainloss
 
 
+
+
 def test(net, testloader, device):
     """Validate the model on the test set."""
     net.to(device)
     criterion = torch.nn.CrossEntropyLoss()
     correct, loss = 0, 0.0
     with torch.no_grad():
-        for batch in testloader:
-            images = batch["img"].to(device)
-            labels = batch["label"].to(device)
+        for images, labels in testloader:
+            images, labels = images.to(device), labels.to(device)
             outputs = net(images)
             loss += criterion(outputs, labels).item()
             correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()

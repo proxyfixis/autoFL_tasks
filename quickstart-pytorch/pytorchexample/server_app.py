@@ -5,7 +5,7 @@ from flwr.app import ArrayRecord, ConfigRecord, Context, MetricRecord
 from flwr.serverapp import Grid, ServerApp
 from flwr.serverapp.strategy import FedAvg
 
-from pytorchexample.task import Net, load_centralized_dataset, test
+from pytorchexample.task import Net
 
 # Create ServerApp
 app = ServerApp()
@@ -25,7 +25,7 @@ def main(grid: Grid, context: Context) -> None:
     arrays = ArrayRecord(global_model.state_dict())
 
     # Initialize FedAvg strategy
-    strategy = FedAvg(fraction_evaluate=fraction_evaluate)
+    strategy = FedAvg(fraction_evaluate=0.0)
 
     # Start strategy, run FedAvg for `num_rounds`
     result = strategy.start(
@@ -33,7 +33,7 @@ def main(grid: Grid, context: Context) -> None:
         initial_arrays=arrays,
         train_config=ConfigRecord({"lr": lr}),
         num_rounds=num_rounds,
-        evaluate_fn=global_evaluate,
+        
     )
 
     # Save final model to disk
@@ -42,7 +42,7 @@ def main(grid: Grid, context: Context) -> None:
     torch.save(state_dict, "final_model.pt")
 
 
-def global_evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
+'''def global_evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
     """Evaluate model on central data."""
 
     # Load the model and initialize it with the received weights
@@ -58,4 +58,4 @@ def global_evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
     test_loss, test_acc = test(model, test_dataloader, device)
 
     # Return the evaluation metrics
-    return MetricRecord({"accuracy": test_acc, "loss": test_loss})
+    return MetricRecord({"accuracy": test_acc, "loss": test_loss})'''

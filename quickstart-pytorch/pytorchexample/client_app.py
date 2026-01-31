@@ -4,7 +4,8 @@ import torch
 from flwr.app import ArrayRecord, Context, Message, MetricRecord, RecordDict
 from flwr.clientapp import ClientApp
 
-from pytorchexample.task import Net, load_data
+from pytorchexample.task import Net, load_local_image_data
+
 from pytorchexample.task import test as test_fn
 from pytorchexample.task import train as train_fn
 
@@ -23,10 +24,12 @@ def train(msg: Message, context: Context):
     model.to(device)
 
     # Load the data
-    partition_id = context.node_config["partition-id"]
-    num_partitions = context.node_config["num-partitions"]
     batch_size = context.run_config["batch-size"]
-    trainloader, _ = load_data(partition_id, num_partitions, batch_size)
+    client_id = context.node_config["partition-id"]
+    trainloader, _ = load_local_image_data(
+        client_id=client_id,
+        batch_size=batch_size
+    )
 
     # Call the training function
     train_loss = train_fn(
@@ -59,10 +62,13 @@ def evaluate(msg: Message, context: Context):
     model.to(device)
 
     # Load the data
-    partition_id = context.node_config["partition-id"]
-    num_partitions = context.node_config["num-partitions"]
     batch_size = context.run_config["batch-size"]
-    _, valloader = load_data(partition_id, num_partitions, batch_size)
+    client_id = context.node_config["partition-id"]
+    _, valloader = load_local_image_data(
+        client_id=client_id,
+        batch_size=batch_size
+    )
+
 
     # Call the evaluation function
     eval_loss, eval_acc = test_fn(
