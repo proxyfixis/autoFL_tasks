@@ -7,4 +7,4 @@ venv/
 .venv/
 venv*/
 
-./quickstart-pytorch/wandb
+wandb/
