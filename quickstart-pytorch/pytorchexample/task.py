@@ -128,3 +128,26 @@ def test(net, testloader, device):
     accuracy = correct / len(testloader.dataset)
     loss = loss / len(testloader)
     return loss, accuracy
+
+
+def class_wise_accuracy(net, dataloader, device, num_classes=10):
+    net.eval()
+    correct = [0] * num_classes
+    total = [0] * num_classes
+
+    with torch.no_grad():
+        for images, labels in dataloader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = net(images)
+            preds = torch.argmax(outputs, dim=1)
+
+            for i in range(len(labels)):
+                label = labels[i].item()
+                total[label] += 1
+                if preds[i].item() == label:
+                    correct[label] += 1
+
+    return {
+        f"class_{c}_acc": (correct[c] / total[c] if total[c] > 0 else 0.0)
+        for c in range(num_classes)
+    }

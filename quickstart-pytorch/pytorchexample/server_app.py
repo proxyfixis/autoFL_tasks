@@ -1,11 +1,14 @@
 """pytorchexample: A Flower / PyTorch app."""
-
 import torch
+import wandb
+import os
+
+from pytorchexample.task import Net
 from flwr.app import ArrayRecord, ConfigRecord, Context, MetricRecord
 from flwr.serverapp import Grid, ServerApp
 from flwr.serverapp.strategy import FedAvg
 
-from pytorchexample.task import Net
+
 
 # Create ServerApp
 app = ServerApp()
@@ -14,6 +17,10 @@ app = ServerApp()
 @app.main()
 def main(grid: Grid, context: Context) -> None:
     """Main entry point for the ServerApp."""
+    wandb.init(
+        project="TASK4-AutoFL",
+        name="server",
+    )
 
     # Read run config
     fraction_evaluate: float = context.run_config["fraction-evaluate"]
@@ -25,13 +32,14 @@ def main(grid: Grid, context: Context) -> None:
     arrays = ArrayRecord(global_model.state_dict())
 
     # Initialize FedAvg strategy
-    strategy = FedAvg(fraction_evaluate=0.0)
+    strategy = FedAvg(fraction_evaluate=fraction_evaluate)
 
     # Start strategy, run FedAvg for `num_rounds`
     result = strategy.start(
         grid=grid,
         initial_arrays=arrays,
         train_config=ConfigRecord({"lr": lr}),
+        evaluate_config=ConfigRecord({}), 
         num_rounds=num_rounds,
         
     )
@@ -40,6 +48,9 @@ def main(grid: Grid, context: Context) -> None:
     print("\nSaving final model to disk...")
     state_dict = result.arrays.to_torch_state_dict()
     torch.save(state_dict, "final_model.pt")
+
+    wandb.finish()
+
 
 
 '''def global_evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:

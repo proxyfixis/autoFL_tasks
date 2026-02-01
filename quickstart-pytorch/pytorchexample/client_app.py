@@ -1,6 +1,7 @@
 """pytorchexample: A Flower / PyTorch app."""
 
 import torch
+import wandb
 from flwr.app import ArrayRecord, Context, Message, MetricRecord, RecordDict
 from flwr.clientapp import ClientApp
 
@@ -8,6 +9,9 @@ from pytorchexample.task import Net, load_local_image_data
 
 from pytorchexample.task import test as test_fn
 from pytorchexample.task import train as train_fn
+
+from pytorchexample.task import class_wise_accuracy
+
 
 # Flower ClientApp
 app = ClientApp()
@@ -54,7 +58,11 @@ def train(msg: Message, context: Context):
 @app.evaluate()
 def evaluate(msg: Message, context: Context):
     """Evaluate the model on local data."""
-
+    wandb.init(
+    project="TASK4-AutoFL",
+    name=f"client-{context.node_config['partition-id']}",
+    reinit=True,
+)
     # Load the model and initialize it with the received weights
     model = Net()
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict())
@@ -77,12 +85,25 @@ def evaluate(msg: Message, context: Context):
         device,
     )
 
-    # Construct and return reply Message
-    metrics = {
+    class_acc = class_wise_accuracy(model, valloader, device)
+
+    wandb.log(
+    {
+        "round": context.run_config.get("current-round", 0),
         "eval_loss": eval_loss,
         "eval_acc": eval_acc,
-        "num-examples": len(valloader.dataset),
+        **class_acc,
     }
+)
+
+    # Construct and return reply Message
+    metrics = {
+    "eval_loss": eval_loss,
+    "eval_acc": eval_acc,
+    "num-examples": len(valloader.dataset),
+    **class_acc,
+}
     metric_record = MetricRecord(metrics)
     content = RecordDict({"metrics": metric_record})
+    wandb.finish()
     return Message(content=content, reply_to=msg)

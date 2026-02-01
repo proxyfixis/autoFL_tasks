@@ -6,3 +6,5 @@ cifar-10-batches-py/
 venv/
 .venv/
 venv*/
+
+./quickstart-pytorch/wandb
