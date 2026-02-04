@@ -25,10 +25,10 @@ serverapp = "pytorchexample.server_app:app"
 clientapp = "pytorchexample.client_app:app"
 
 [tool.flwr.app.config]
-num-server-rounds = 2
-fraction-evaluate = 0.5
+num-server-rounds = 5
+fraction-evaluate = 1.0
 local-epochs = 3
-learning-rate = 0.3
+learning-rate = 0.5
 batch-size = 32
 
 [tool.flwr.federations]

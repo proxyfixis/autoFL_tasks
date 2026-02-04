@@ -6,8 +6,8 @@ from PIL import Image
 CIFAR_DIR = "cifar-10-batches-py"
 OUTPUT_DIR = "data"
 
-NUM_CLIENTS = 10
-CLASSES_PER_CLIENT = 2
+NUM_CLIENTS = 20
+CLASSES_PER_CLIENT = 4
 MIN_SAMPLES = 50
 MAX_SAMPLES = 300
 
@@ -47,14 +47,13 @@ for label in label_to_images:
 
 
 # STEP 2: assign label subsets to clients
-all_classes = label_names.copy()
-random.shuffle(all_classes)
-
 client_classes = {}
+
 for cid in range(NUM_CLIENTS):
-    client_classes[cid] = all_classes[
-        cid * CLASSES_PER_CLIENT : (cid + 1) * CLASSES_PER_CLIENT
-    ]
+    client_classes[cid] = random.sample(
+        label_names, CLASSES_PER_CLIENT
+    )
+
 
 
 # STEP 3: allocate non-IID data to clients
