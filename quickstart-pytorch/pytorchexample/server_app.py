@@ -6,7 +6,8 @@ import os
 from pytorchexample.task import Net
 from flwr.app import ArrayRecord, ConfigRecord, Context, MetricRecord
 from flwr.serverapp import Grid, ServerApp
-from flwr.serverapp.strategy import FedAvg
+##from flwr.serverapp.strategy import FedAvg
+from custom_fedavg import FilteredFedAvg
 
 
 
@@ -32,7 +33,11 @@ def main(grid: Grid, context: Context) -> None:
     arrays = ArrayRecord(global_model.state_dict())
 
     # Initialize FedAvg strategy
-    strategy = FedAvg(fraction_evaluate=fraction_evaluate)
+    strategy = FilteredFedAvg(
+    loss_threshold=2.0,
+    min_examples=100,
+    fraction_evaluate=fraction_evaluate,
+)
 
     # Start strategy, run FedAvg for `num_rounds`
     result = strategy.start(
