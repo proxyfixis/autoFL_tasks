@@ -9,6 +9,9 @@ from flwr.serverapp import Grid, ServerApp
 ##from flwr.serverapp.strategy import FedAvg
 from custom_fedavg import FilteredFedAvg
 
+from pytorchexample.datasize_selection_fedavg import DataSizeSelectionFedAvg
+
+
 
 
 # Create ServerApp
@@ -31,11 +34,14 @@ def main(grid: Grid, context: Context) -> None:
     # Load global model
     global_model = Net()
     arrays = ArrayRecord(global_model.state_dict())
+    # NEW: simulated data size per client
+    MIN_DATA_SIZE = 500
+
+   
 
     # Initialize FedAvg strategy
-    strategy = FilteredFedAvg(
-    loss_threshold=2.0,
-    min_examples=100,
+    strategy = DataSizeSelectionFedAvg(
+    min_data_size=500,
     fraction_evaluate=fraction_evaluate,
 )
 
