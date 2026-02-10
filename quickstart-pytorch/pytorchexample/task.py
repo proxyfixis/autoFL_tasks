@@ -1,4 +1,10 @@
 """pytorchexample: A Flower / PyTorch app."""
+''' contents : 
+    model definition
+    train and test 
+    class wise acc
+    data loaded and partition train and eval
+    '''
 
 import os
 from PIL import Image
@@ -8,7 +14,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
 import torch.nn.functional as F
 
-
+## Initialize model
 class Net(nn.Module):
    
     """Improved CNN for CIFAR-like images"""
@@ -71,7 +77,7 @@ class CIFARFolderDataset(Dataset):
         return img, label
 
 
-
+## Load data + split train and eval
 def load_local_image_data(client_id: int, batch_size: int):
     import torchvision.transforms as T
     transform = T.Compose([T.ToTensor(),T.Normalize((0.5,0.5,0.5) , (0.5,0.5,0.5))])
@@ -91,7 +97,7 @@ def load_local_image_data(client_id: int, batch_size: int):
     return trainloader, valloader
 
 
-
+## train function for client , return loss metric
 def train(net, trainloader, epochs, lr, device):
     """Train the model on the training set."""
     net.to(device)  # move model to GPU if available
@@ -113,7 +119,7 @@ def train(net, trainloader, epochs, lr, device):
 
 
 
-
+## test fn for local eval
 def test(net, testloader, device):
     """Validate the model on the test set."""
     net.to(device)
@@ -129,7 +135,7 @@ def test(net, testloader, device):
     loss = loss / len(testloader)
     return loss, accuracy
 
-
+## indexable data for dataloader function
 def class_wise_accuracy(net, dataloader, device, num_classes=10):
     net.eval()
     correct = [0] * num_classes

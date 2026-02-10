@@ -1,0 +1,22 @@
+CLIENT  : Train + Eval
+
+1 - Train  : Initializes model
+            Convert parameters to pytorch format
+            Trains the model on the parameters
+            stores metrics 
+            Packs the parameters and metrics for flower
+            Returns RecordDict
+
+2 - Evaluate : 
+            Loads model 
+            loads parameters
+            Evaluates 
+            Calculates loss , eval accuracy classwise accuracy 
+            logs into wanda
+            packages metrics for flower and returns
+
+
+SERVER : Initialise global model + Initialize strat  + Start strat 
+        Strat orchestrates the remaining parameters
+
+

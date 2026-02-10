@@ -21,6 +21,7 @@ app = ServerApp()
 @app.main()
 def main(grid: Grid, context: Context) -> None:
     """Main entry point for the ServerApp."""
+    
     wandb.init(
         project="TASK4-AutoFL",
         name="server",
@@ -34,10 +35,6 @@ def main(grid: Grid, context: Context) -> None:
     # Load global model
     global_model = Net()
     arrays = ArrayRecord(global_model.state_dict())
-    # NEW: simulated data size per client
-    MIN_DATA_SIZE = 500
-
-   
 
     # Initialize FedAvg strategy
     strategy = DataSizeSelectionFedAvg(
